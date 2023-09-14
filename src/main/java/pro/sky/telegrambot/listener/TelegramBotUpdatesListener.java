@@ -8,6 +8,7 @@ import com.pengrad.telegrambot.response.SendResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import pro.sky.telegrambot.model.NotificationTask;
 import pro.sky.telegrambot.repository.NotificationRepository;
@@ -15,6 +16,7 @@ import pro.sky.telegrambot.repository.NotificationRepository;
 import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -80,7 +82,6 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
     }
 
 
-
     private void startMessage(long chatId, String name) {
         // creating the greetings message
         String answer = " Hi, " + name + " , welcome to your personal reminder";
@@ -111,11 +112,24 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
             logger.info("Request contains all needed info");
             NotificationTask notificationTask = new NotificationTask(chatId, notificationText, LocalDateTime.parse(date, dateFormatter));
             notificationRepository.save(notificationTask);
+            sendMessage(chatId,"Notification is saved");
 
         } else {
             logger.info("Something went wrong. Not enough data received");
             sendMessage(chatId, "Wrong format. Please try again");
         }
     }
+
+    @Scheduled(cron = "0 0/1 * * * *")
+    public void sendNotifications() {
+        // creating a list of all notifications needed to be sent this very minute
+        List<NotificationTask> notifications = notificationRepository.findAllBySendTime(LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES));
+       //sending notifications to exact users
+        for (NotificationTask notification : notifications) {
+            sendMessage(notification.getChatId(), notification.getNotification());
+            logger.info("Sending notifications to users");
+        }
+    }
+
 
 }

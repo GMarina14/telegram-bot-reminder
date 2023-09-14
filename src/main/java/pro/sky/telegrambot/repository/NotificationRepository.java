@@ -11,9 +11,6 @@ import java.util.List;
 @Repository
 public interface NotificationRepository extends JpaRepository<NotificationTask, Long> {
 
-/*    @Query(value ="ALTER TABLE notification_task ALTER ", nativeQuery = true)
-    void createNotification(NotificationTask notificationTask);*/
-
     List<NotificationTask> findAllByChatId(long chatId);
     List<NotificationTask> findAllBySendTime(LocalDateTime sendTime);
 }
