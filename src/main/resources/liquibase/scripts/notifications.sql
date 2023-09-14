@@ -2,8 +2,8 @@
 
 -- changeset GMarina14:1
 CREATE TABLE IF NOT EXISTS notification_task(
-    notification_id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    notification_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY ,
     chat_id BIGINT NOT NULL,
-    notification_text TEXT NOT NULL,
-    notification_send_time TIMESTAMP NOT NULL
+    notification TEXT NOT NULL,
+    send_time TIMESTAMP NOT NULL
 );
