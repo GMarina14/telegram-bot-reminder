@@ -2,14 +2,18 @@ package pro.sky.telegrambot.listener;
 
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.UpdatesListener;
+import com.pengrad.telegrambot.model.BotCommand;
 import com.pengrad.telegrambot.model.Update;
+import com.pengrad.telegrambot.model.botcommandscope.BotCommandScopeDefault;
 import com.pengrad.telegrambot.request.SendMessage;
+import com.pengrad.telegrambot.request.SetMyCommands;
 import com.pengrad.telegrambot.response.SendResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import pro.sky.telegrambot.configuration.TelegramBotConfiguration;
 import pro.sky.telegrambot.model.NotificationTask;
 import pro.sky.telegrambot.repository.NotificationRepository;
 
@@ -17,6 +21,7 @@ import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -37,8 +42,23 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
     @Autowired
     private TelegramBot telegramBot;
 
-    public TelegramBotUpdatesListener(NotificationRepository notificationRepository) {
+    private final TelegramBotConfiguration telegramBotConfiguration;
+
+
+    public TelegramBotUpdatesListener(NotificationRepository notificationRepository, TelegramBotConfiguration telegramBotConfiguration) {
         this.notificationRepository = notificationRepository;
+        this.telegramBotConfiguration = telegramBotConfiguration;
+
+    /*    List<BotCommand> botsCommands = new ArrayList<>();
+        botsCommands.add(new BotCommand("/start", "press to start the RemindMe bot"));
+        botsCommands.add(new BotCommand("/new", "create new notification"));
+        botsCommands.add(new BotCommand("/help", "invoke this if want to see this message again"));
+
+        telegramBot.execute(new SetMyCommands(botsCommands, new BotCommandScopeDefault(), null));*/
+
+            //telegramBot.execute(new SetMyCommands(botsCommands, new BotCommandScopeDefault(), null));
+
+
     }
 
     @PostConstruct
@@ -73,8 +93,8 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
                     default:
                         sendMessage(chatId, "Unexpected command, not able to process it yet");
                         logger.info("The command was not recognized");
+                        break;
                 }
-
             });
 
         }
@@ -128,8 +148,7 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
         for (NotificationTask notification : notifications) {
             sendMessage(notification.getChatId(), notification.getNotification());
             logger.info("Sending notifications to users");
+            notificationRepository.delete(notification);
         }
     }
-
-
 }
