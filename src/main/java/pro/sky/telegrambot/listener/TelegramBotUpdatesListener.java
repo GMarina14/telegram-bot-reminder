@@ -77,28 +77,44 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
 
                 // identifying chat id
                 long chatId = update.message().chat().id();
+                String text = update.message().text();
 
                 // sending feedback if needed
-                switch (update.message().text()) {
-                    case "/start":
-                        startMessage(chatId, update.message().chat().firstName());
-                        logger.info("Everything is ok. The greeting message was sent");
-                        break;
-
-                    case "/new":
-                        saveNotification(chatId, update.message().text());
-                        logger.info("New notification is saved");
-                        break;
-
-                    default:
-                        sendMessage(chatId, "Unexpected command, not able to process it yet");
-                        logger.info("The command was not recognized");
-                        break;
+                if("/start".equals(text)){
+                    startMessage(chatId, update.message().chat().firstName());
+                    logger.info("Everything is ok. The greeting message was sent");
+                }else{
+                  // if(checkFormatAndDate(chatId, update.message().text())){
+                       saveNotification(chatId, update.message().text());
+                       logger.info("Everything is ok. The notification is saved");
                 }
+
+
+
             });
 
         }
         return UpdatesListener.CONFIRMED_UPDATES_ALL;
+    }
+
+    // checking if format is correct and notification date is actual
+    private boolean checkFormatAndDate(long chatId, String notification){
+        Matcher matcher = pattern.matcher(notification);
+        LocalDateTime today = LocalDateTime.now();
+        LocalDateTime desirableDate =  LocalDateTime.parse(matcher.group(1), dateFormatter);
+        boolean result = true;
+
+        if(!matcher.matches()) {
+            logger.error("Notification format is incorrect");
+            sendMessage(chatId, "Format is incorrect");
+            result= false;
+        } else if (!(desirableDate.isEqual(today) || desirableDate.isAfter(today))) {
+            logger.error("The date is not actual");
+            sendMessage(chatId, "Date has to be actual: today or after today. You can't send a reminder to the past yet");
+            result = false;
+        }
+
+        return result;
     }
 
 
@@ -109,7 +125,7 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
     }
 
     private void sendMessage(long chatId, String text) {
-        // getting a greeting message for a specified user
+        // creating a message for a specified user
         SendMessage message = new SendMessage(String.valueOf(chatId), text);
 
         //sending the message
@@ -122,22 +138,31 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
 
 
     private void saveNotification(long chatId, String notification) {
-        // checking if the request text contains all needed info to create notification
         Matcher matcher = pattern.matcher(notification);
+        LocalDateTime today = LocalDateTime.now();
 
         if (matcher.matches()) {
             // grouping notification info
             String date = matcher.group(1);
             String notificationText = matcher.group(3);
-            logger.info("Request contains all needed info");
-            NotificationTask notificationTask = new NotificationTask(chatId, notificationText, LocalDateTime.parse(date, dateFormatter));
-            notificationRepository.save(notificationTask);
-            sendMessage(chatId,"Notification is saved");
+
+            LocalDateTime notificationDate = LocalDateTime.parse(date, dateFormatter);
+
+            // checking if data is actual
+            if (!(notificationDate.isEqual(today) || notificationDate.isAfter(today))){
+                logger.error("The date is not actual");
+                sendMessage(chatId, "Date has to be actual: today or after today. You can't send a reminder to the past yet");
+            }else {
+                logger.info("Request contains all needed info");
+                notificationRepository.save(new NotificationTask(chatId, notificationText, notificationDate));
+                sendMessage(chatId,"Notification is saved");
+            }
 
         } else {
             logger.info("Something went wrong. Not enough data received");
             sendMessage(chatId, "Wrong format. Please try again");
         }
+
     }
 
     @Scheduled(cron = "0 0/1 * * * *")
